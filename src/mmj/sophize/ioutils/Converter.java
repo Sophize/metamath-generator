@@ -10,9 +10,8 @@
 //
 //     User data = Converter.fromJsonString(jsonString);
 
-package mmj.sophize;
+package mmj.sophize.ioutils;
 
-import java.util.*;
 import java.io.IOException;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.core.JsonProcessingException;

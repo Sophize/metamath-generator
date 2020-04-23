@@ -1,4 +1,4 @@
-package mmj.sophize;
+package mmj.sophize.ioutils;
 
 import java.util.*;
 import com.fasterxml.jackson.annotation.*;

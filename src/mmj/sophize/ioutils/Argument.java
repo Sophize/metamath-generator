@@ -1,4 +1,4 @@
-package mmj.sophize;
+package mmj.sophize.ioutils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

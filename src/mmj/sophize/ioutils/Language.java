@@ -1,6 +1,5 @@
-package mmj.sophize;
+package mmj.sophize.ioutils;
 
-import java.util.*;
 import java.io.IOException;
 import com.fasterxml.jackson.annotation.*;
 
