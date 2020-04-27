@@ -37,6 +37,7 @@ import static mmj.util.UtilConstants.*;
 
 import mmj.lang.*;
 import mmj.lang.ParseTree.RPNStep;
+import mmj.sophize.StoreCombiner;
 import mmj.verify.*;
 
 /**
@@ -271,6 +272,7 @@ public class GrammarBoss extends Boss {
         logicalSystem.setSyntaxVerifier(grammar);
 
         batchFramework.outputBoss.printAndClearMessages();
+        StoreCombiner.processGrammar(grammar);
     }
 
     /**

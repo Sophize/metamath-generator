@@ -194,7 +194,7 @@ public class PaConstants {
      * Renumber starting point: 1, 2, 3, ... vs 3, 4, 5, ... This is hardcoded,
      * but a RunParm could be added.
      */
-    public static final int PROOF_STEP_RENUMBER_START = 50;
+    public static final int PROOF_STEP_RENUMBER_START = 0;
 
     /**
      * PROOF_STEP_RENUMBER_INTERVAL = 1

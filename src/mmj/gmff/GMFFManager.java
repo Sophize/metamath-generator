@@ -665,7 +665,17 @@ public class GMFFManager {
         parser.doIt(mmDollarTComment);
 
         myTypesetDefs.printTypesetDefs(messages);
+        for(Map.Entry<String,String> entry:parser.typesetDefMap.get(0).entrySet()){
+            String key = entry.getKey();
+            String existing = LATEXDEF_MAP.get(key);
+            if(existing!=null && !existing.equals(entry.getValue())){
+                System.out.println("conflict in entry: " + key);
+                //throw new IllegalStateException("conflict in entry: " + key);
+            }
+            LATEXDEF_MAP.put(key,entry.getValue());
+        }
     }
+    public static final Map<String,String> LATEXDEF_MAP = new HashMap<>();
 
     /**
      * Generates and outputs to the Messages object an audit report of the final
