@@ -2,8 +2,8 @@ package mmj.sophize;
 
 import mmj.lang.Assrt;
 import mmj.lang.Stmt;
-import mmj.sophize.ioutils.*;
 import mmj.verify.Grammar;
+import org.sophize.datamodel.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,7 +12,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 import static mmj.sophize.TempTerm.createPrimitiveMetamathTerm;
-import static mmj.sophize.ioutils.ResourceUtils.toJsonString;
+import static org.sophize.datamodel.ResourceUtils.toJsonString;
 
 public class StoreCombiner {
   private static final String OUTPUT_DIRECTORY = "output";

@@ -1,10 +1,7 @@
 package mmj.sophize;
 
 import mmj.lang.*;
-import mmj.sophize.ioutils.Citation;
-import mmj.sophize.ioutils.Language;
-import mmj.sophize.ioutils.MetaLanguage;
-import mmj.sophize.ioutils.Term;
+import org.sophize.datamodel.Citation;
 
 import java.util.*;
 

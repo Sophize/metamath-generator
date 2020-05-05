@@ -3,10 +3,10 @@ package mmj.sophize;
 import mmj.lang.Assrt;
 import mmj.lang.LogHyp;
 import mmj.lang.Stmt;
-import mmj.sophize.ioutils.Citation;
-import mmj.sophize.ioutils.Language;
-import mmj.sophize.ioutils.MetaLanguage;
-import mmj.sophize.ioutils.Proposition;
+import org.sophize.datamodel.Citation;
+import org.sophize.datamodel.Language;
+import org.sophize.datamodel.MetaLanguage;
+import org.sophize.datamodel.Proposition;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;

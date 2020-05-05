@@ -4,8 +4,8 @@ import mmj.lang.ParseTree;
 import mmj.lang.Stmt;
 import mmj.lang.Theorem;
 import mmj.lang.Var;
-import mmj.sophize.ioutils.Argument;
 import mmj.verify.ProofDerivationStepEntry;
+import org.sophize.datamodel.Argument;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -110,9 +110,8 @@ class TempArgument {
     return String.join(", ", updated);
   }
 
-  private  String getPropNavLinkWithDisplayPhrase(String assignableId, String displayPhrase) {
+  private String getPropNavLinkWithDisplayPhrase(String assignableId, String displayPhrase) {
     // Escape the '\' so that it doesn't get mixes with the table dividers.
     return "#(P_" + assignableId + ", '" + displayPhrase + "'\\|HIDE_TVI\\|NAV_LINK)";
   }
-
 }

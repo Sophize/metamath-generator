@@ -3,10 +3,10 @@ package mmj.sophize;
 import mmj.lang.Stmt;
 import mmj.lang.Sym;
 import mmj.lang.VarHyp;
-import mmj.sophize.ioutils.Citation;
-import mmj.sophize.ioutils.Language;
-import mmj.sophize.ioutils.MetaLanguage;
-import mmj.sophize.ioutils.Term;
+import org.sophize.datamodel.Citation;
+import org.sophize.datamodel.Language;
+import org.sophize.datamodel.MetaLanguage;
+import org.sophize.datamodel.Term;
 
 import java.util.ArrayList;
 import java.util.List;

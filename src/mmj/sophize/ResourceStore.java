@@ -2,8 +2,8 @@ package mmj.sophize;
 
 import mmj.gmff.GMFFManager;
 import mmj.lang.*;
-import mmj.sophize.ioutils.Beliefset;
 import mmj.verify.*;
+import org.sophize.datamodel.Beliefset;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.toList;
 import static mmj.sophize.Helpers.*;
 
-public class ResourceStore {
+class ResourceStore {
   static Map<String, String> latexdefMap;
   private static final List<String> TERM_DEFINING_AXIOM_TYPECODES =
       Arrays.asList("class", "wff", "setvar");
@@ -65,7 +65,7 @@ public class ResourceStore {
   private void addTermsFromStmt(Stmt stmt, List<Stmt> orderedStmts, int stmtIndex) {
     if (!isTermDefiningStatement(stmt)) return;
     if (stmt instanceof VarHyp) {
-      TempTerm term = new TempTerm(stmt, null, null, "");
+      TempTerm term = new TempTerm(stmt, null, null, stmt.getLabel());
       String assignableId = term.getAssignableId();
       myAssert(!termData.containsKey(assignableId));
       termData.put(assignableId, term);
