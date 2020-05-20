@@ -180,7 +180,7 @@ class ResourceStore {
     }
     Beliefset beliefset = new Beliefset();
     beliefset.setNames(new String[] {beliefsetName});
-    beliefset.setUnsupportedPropositionPtrs(axioms.toArray(String[]::new));
+    beliefset.setUnsupportedPropositionPtrs(axioms.toArray(new String[0]));
     return beliefset;
   }
 

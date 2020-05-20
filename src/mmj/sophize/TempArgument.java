@@ -78,10 +78,10 @@ class TempArgument {
     Argument argument = new Argument();
     argument.setMetaLanguage(MetaLanguage.METAMATH);
     argument.setLanguage(Language.METAMATH_SET_MM);
-    argument.setPremises(premises.toArray(String[]::new));
+    argument.setPremises(premises.toArray(new String[0]));
     String conclusionLabel = getCorrectedPropReference(stmt.getLabel());
     argument.setConclusion("#P_" + conclusionLabel);
-    argument.setLookupTerms(getLookupTerms().toArray(String[]::new));
+    argument.setLookupTerms(getLookupTerms().toArray(new String[0]));
 
     String argumentText = String.join("\n", statementLines);
     if (!conclusionLabel.equals(stmt.getLabel()))

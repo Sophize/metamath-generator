@@ -98,7 +98,7 @@ class TempTerm {
 
   String[] getLookupTerms() {
     return getLookupTermsForParseNode(primarySyntax().getExprParseTree().getRoot())
-        .toArray(String[]::new);
+        .toArray(new String[0]);
   }
 
   static String combineIfNotIdentical(List<String> strs, String delimiter) {

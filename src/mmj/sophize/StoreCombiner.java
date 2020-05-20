@@ -6,9 +6,10 @@ import mmj.lang.*;
 import mmj.verify.Grammar;
 import org.sophize.datamodel.*;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -94,11 +95,10 @@ public class StoreCombiner {
     GMFFManager.LATEXDEF_MAP.put("|-", "\\scriptsize\\color{#999} \\vdash");
     GMFFManager.LATEXDEF_MAP.put("wff", "\\scriptsize\\color{#999} {\\rm wff}");
     GMFFManager.LATEXDEF_MAP.put("class", "\\scriptsize\\color{#999} {\\rm class}");
-    ObjectMapper mapper = new ObjectMapper();
-    Files.writeString(
-        Paths.get("output", "metamath_set_mm_latex_map"),
-        new ObjectMapper().writeValueAsString(GMFFManager.LATEXDEF_MAP),
-        new OpenOption[0]);
+    try (PrintStream out =
+        new PrintStream(new FileOutputStream("output/metamath_set_mm_latex_map"))) {
+      out.print(new ObjectMapper().writeValueAsString(GMFFManager.LATEXDEF_MAP));
+    }
   }
 
   private static void fixAxioms(Beliefset beliefset, Map<String, String> dedupedPropsIdMap) {

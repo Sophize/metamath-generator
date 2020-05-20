@@ -40,7 +40,7 @@ class TempProposition {
     proposition.setLanguage(Language.METAMATH_SET_MM);
     proposition.setRemarks(getRemarks());
     proposition.setStatement(getPropositionStatement());
-    proposition.setLookupTerms(getLookupTerms().toArray(String[]::new));
+    proposition.setLookupTerms(getLookupTerms().toArray(new String[0]));
 
     String specialName = SPECIAL_THEOREM_NAMES.get(label);
     if (specialName != null) {
