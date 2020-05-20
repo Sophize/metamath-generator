@@ -95,6 +95,15 @@ class ResourceStore {
   private void addPropositions(List<Stmt> orderedStmts, Map<String, Sym> symTbl) {
     for (Stmt stmt : orderedStmts) {
       Assrt assrt = getPropositionAssrt(stmt);
+      if (assrt == null) continue;
+      if (stmt.getSeq() % 1000000 == 0) System.out.println("prop seq: " + stmt.getSeq());
+      List<List<Var>> distinctVars = getDistinctAndSaveDummyVariables(assrt, symTbl);
+      TempProposition prop = new TempProposition(assrt, distinctVars);
+      propositionData.put(assrt.getLabel(), prop);
+    }
+    for (Stmt stmt : orderedStmts) {
+      Assrt assrt = getPropositionAssrt(stmt);
+      if (assrt == null) continue;
       String label = assrt.getLabel();
       boolean canBeUnprocessedDuplicate =
           (label.contains("ALT") || label.contains("OLD"))
@@ -104,14 +113,8 @@ class ResourceStore {
         addDuplicatesToMap(assrt, orderedStmts);
       }
     }
-    for (Stmt stmt : orderedStmts) {
-      Assrt assrt = getPropositionAssrt(stmt);
-      if (assrt == null) continue;
-      String distinctVarString = getDistinctAndSaveDummyVariables(assrt, symTbl);
-      if (!alternateToOriginalStmt.containsKey(assrt.getLabel())) {
-        TempProposition prop = new TempProposition(assrt, distinctVarString);
-        propositionData.put(assrt.getLabel(), prop);
-      }
+    for (String alternate : alternateToOriginalStmt.keySet()) {
+      propositionData.remove(alternate);
     }
   }
 
@@ -124,12 +127,16 @@ class ResourceStore {
 
   private void addDuplicatesToMap(Assrt assrt, List<Stmt> orderedStmts) {
     // Some proofs don't have a non-ALT version. Eg. trsspwALT1, trsspwALT2, trsspwALT3
+    if (assrt instanceof Axiom) return;
     Set<Assrt> duplicates = new HashSet<>();
     duplicates.add(assrt);
     for (Stmt candidate : orderedStmts) {
       if (candidate == assrt) continue;
       Assrt originalCandidate = getPropositionAssrt(candidate);
-      if (originalCandidate != null && areSameProps(assrt, originalCandidate)) {
+      if (originalCandidate != null
+          && areSameProps(
+              propositionData.get(assrt.getLabel()), propositionData.get(candidate.getLabel()))) {
+        if (originalCandidate instanceof Axiom) return; // Don't deduplicate axioms.
         duplicates.add(originalCandidate);
       }
     }
@@ -137,13 +144,16 @@ class ResourceStore {
     Assrt original = findOriginal(duplicates);
     for (Assrt duplicate : duplicates) {
       if (duplicate == original) continue;
-      putIfAbsent(alternateToOriginalStmt, assrt.getLabel(), duplicate.getLabel());
+      putIfNotDifferent(alternateToOriginalStmt, duplicate.getLabel(), original.getLabel());
       for (int i = 0; i < duplicate.getLogHypArray().length; i++) {
         // assume that the order of hypothesis is the same in original and alternate.
-        String alternateHypId = assrt.getLogHypArray()[i].getLabel();
-        String originalHypId = duplicate.getLogHypArray()[i].getLabel();
+        String alternateHypId = duplicate.getLogHypArray()[i].getLabel();
+        String originalHypId = original.getLogHypArray()[i].getLabel();
         if (alternateHypId.equals(originalHypId)) continue;
-        putIfAbsent(alternateToOriginalStmt, alternateHypId, originalHypId);
+        // putIfNotDifferent(alternateToOriginalStmt, alternateHypId, originalHypId);
+        // In rare cases, their may be two original to a single alternate hypothesis
+        // Eg. for rexbiiOLD.1 the originals are rexbii.1 and ralbii.1 (which are the same thing)
+        alternateToOriginalStmt.put(alternateHypId, originalHypId);
       }
     }
   }
@@ -181,7 +191,7 @@ class ResourceStore {
     return true;
   }
 
-  private String getDistinctAndSaveDummyVariables(Assrt assrt, Map<String, Sym> symTbl) {
+  private List<List<Var>> getDistinctAndSaveDummyVariables(Assrt assrt, Map<String, Sym> symTbl) {
     Set<String> idsInProp = new HashSet<>();
     Set<String> dummyVariableIds = new HashSet<>();
 
@@ -215,28 +225,18 @@ class ResourceStore {
             .collect(toList()));
 
     final List<List<Var>> comboDvGroups = ScopeFrame.consolidateDvGroups(comboDvArray);
-    String distinctVariables =
-        comboDvGroups.stream()
-            .map(
-                dvGroup ->
-                    dvGroup.stream()
+    return comboDvGroups.stream()
+        .map(
+            dvGroup ->
+                dvGroup.stream()
                         .filter(var -> idsInProp.contains(var.getId()))
-                        .sorted(Comparator.comparing(Var::getId))
-                        .collect(toList()))
-            .filter(dvGroup -> dvGroup.size() > 1)
-            .map(
-                dvGroup ->
-                    dvGroup.stream()
-                        .map(var -> varToString(var.getActiveVarHyp(), latexdefMap))
-                        .collect(Collectors.joining(",")))
-            .sorted()
-            .collect(Collectors.joining(" &nbsp;&nbsp;"));
-    if (distinctVariables == null || distinctVariables.isEmpty()) {
-      return "";
-    }
-    return "\n\n*when the following groups of variables are #(T_distinct_variable, 'distinct' ):* "
-        + "&nbsp;&nbsp;"
-        + distinctVariables;
+                    .sorted(Comparator.comparing(Var::getId))
+                    .collect(toList()))
+        .filter(dvGroup -> dvGroup.size() > 1)
+        .sorted(
+            Comparator.comparing(
+                varList -> varList.stream().map(Var::getId).collect(Collectors.joining(" "))))
+        .collect(Collectors.toList());
   }
 
   private void addArguments(List<Stmt> orderedStmts, Grammar grammar) {
@@ -245,6 +245,7 @@ class ResourceStore {
 
     for (Stmt stmt : orderedStmts) {
       if (stmt.getSeq() > seqLimit) break;
+      if (stmt.getSeq() % 1000000 == 0) System.out.println("arg seq: " + stmt.getSeq());
       TempArgument argument = getArgument(stmt, hyps, grammar);
       if (argument != null) argumentData.put(stmt.getLabel(), argument);
     }

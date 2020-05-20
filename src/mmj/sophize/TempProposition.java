@@ -3,6 +3,7 @@ package mmj.sophize;
 import mmj.lang.Assrt;
 import mmj.lang.LogHyp;
 import mmj.lang.Stmt;
+import mmj.lang.Var;
 import org.sophize.datamodel.Citation;
 import org.sophize.datamodel.Language;
 import org.sophize.datamodel.MetaLanguage;
@@ -10,10 +11,8 @@ import org.sophize.datamodel.Proposition;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -21,27 +20,27 @@ import static mmj.sophize.Helpers.*;
 
 class TempProposition {
   List<Assrt> assrts;
-  String distinctVarsString;
+  List<List<Var>> distinctVars;
 
-  TempProposition(Assrt assrt, String distinctVarsString) {
+  TempProposition(Assrt assrt, List<List<Var>> distinctVars) {
     this.assrts = Arrays.asList(assrt);
-    this.distinctVarsString = distinctVarsString;
+    this.distinctVars = distinctVars;
   }
 
-  TempProposition(List<Assrt> assrts, String distinctVarsString) {
+  TempProposition(List<Assrt> assrts, List<List<Var>> distinctVars) {
     this.assrts = assrts;
-    this.distinctVarsString = distinctVarsString;
+    this.distinctVars = distinctVars;
   }
 
-  Proposition getProposition(Map<String, String> latexdefMap) {
-    String label = assrts.get(0).getLabel();
+  Proposition getProposition() {
+    String label = primaryAssrt().getLabel();
 
     Proposition proposition = new Proposition();
     proposition.setMetaLanguage(MetaLanguage.METAMATH);
     proposition.setLanguage(Language.METAMATH_SET_MM);
     proposition.setRemarks(getRemarks());
-    proposition.setStatement(
-        getPropositionStatement(assrts.get(0), distinctVarsString, latexdefMap));
+    proposition.setStatement(getPropositionStatement());
+    proposition.setLookupTerms(getLookupTerms().toArray(String[]::new));
 
     String specialName = SPECIAL_THEOREM_NAMES.get(label);
     if (specialName != null) {
@@ -55,40 +54,57 @@ class TempProposition {
     return proposition;
   }
 
+  Assrt primaryAssrt() {
+    return assrts.get(0);
+  }
+
+  String distinctVarsStatement() {
+    return distinctVars.stream()
+        .map(group -> group.stream().map(Var::getId).collect(Collectors.joining(" ", "$d ", " $.")))
+        .collect(Collectors.joining("\n"));
+  }
+
+  List<String> getLookupTerms() {
+    List<String> lookupTerms = new ArrayList<>();
+    Assrt assrt = primaryAssrt();
+    for (LogHyp hyp : assrt.getLogHypArray()) {
+      lookupTerms.addAll(getLookupTerms(hyp));
+    }
+    lookupTerms.addAll(getLookupTerms(assrt));
+
+    lookupTerms.addAll(
+        distinctVars.stream()
+            .flatMap(List::stream)
+            .map(var -> Helpers.varToLookupTerm(var.getActiveVarHyp()))
+            .collect(Collectors.toList()));
+    return lookupTerms;
+  }
+
   private String getRemarks() {
     return TempTerm.combineIfNotIdentical(
         assrts.stream().map(assrt -> toResourceRemark(assrt.getDescription())).collect(toList()),
         "\n\n---\n\n");
   }
 
-  static String getPropositionStatement(
-      Assrt assrt, String distinctVarsString, Map<String, String> latexdefMap) {
-    StringBuilder statement = new StringBuilder();
+  private String getPropositionStatement() {
+    Assrt assrt = primaryAssrt();
     LogHyp[] hypothesisList = assrt.getLogHypArray();
-    boolean singleHypothesis = hypothesisList != null && hypothesisList.length == 1;
-    boolean multipleHypotheses = hypothesisList != null && hypothesisList.length > 1;
-    if (singleHypothesis) {
-      statement
-          .append("*If* ")
-          .append(getPremiseOrConclusionStmt(hypothesisList[0], latexdefMap))
-          .append("\n");
-    } else if (multipleHypotheses) {
-      statement.append("*Given the following hypotheses:*\\\n");
-      for (int i = 0; i < hypothesisList.length; i++) {
-        LogHyp hypothesis = hypothesisList[i];
-        String hypStatement = getPremiseOrConclusionStmt(hypothesis, latexdefMap);
-        if (i != hypothesisList.length - 1) hypStatement += "\\";
-        statement.append(hypStatement).append("\n");
-      }
+    List<String> stmtStrings = new ArrayList<>();
+    for (LogHyp hyp : hypothesisList) {
+      stmtStrings.add(stmtToString(hyp));
     }
+    stmtStrings.add(stmtToString(assrt));
+    stmtStrings.add(distinctVarsStatement());
+    return stmtStrings.stream().filter(s -> !s.isEmpty()).collect(Collectors.joining("\n"));
+  }
 
-    if (singleHypothesis) {
-      statement.append("\n*then,* ");
-    } else if (multipleHypotheses) {
-      statement.append("\n\n*we can assert that:*\\\n");
-    }
-    statement.append(getPremiseOrConclusionStmt(assrt, latexdefMap)).append(distinctVarsString);
-    return statement.toString();
+  static List<String> getLookupTerms(Stmt stmt) {
+    return getLookupTermsForParseNode(stmt.getExprParseTree().getRoot());
+  }
+
+  private static String stmtToString(Stmt stmt) {
+    String startTag = stmt instanceof LogHyp ? "$e" : "$p";
+    return String.join(" ", stmt.getLabel(), startTag, stmt.getFormula().toString(), "$.");
   }
 
   private static final Map<String, String> SPECIAL_THEOREM_NAMES = new HashMap<>();
@@ -118,13 +134,5 @@ class TempProposition {
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
-  }
-
-  static String getPremiseOrConclusionStmt(Stmt stmt, Map<String, String> latexdefMap) {
-    return "$\\scriptsize \\color{#999}"
-        + stmt.getLabel()
-        + "$ "
-        + getStatementForParseTree(
-            stmt.getExprParseTree(), latexdefMap.get(stmt.getTyp().getId()), latexdefMap);
   }
 }

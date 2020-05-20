@@ -10,7 +10,6 @@ import org.sophize.datamodel.Term;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import static mmj.sophize.Helpers.*;
@@ -39,26 +38,26 @@ class TempTerm {
     this.assignableId = assignableId;
   }
 
-  Term getTerm(Map<String, String> latexdefMap) {
+  Term getTerm() {
     return createMetamathTerm(
-        getPhrase(latexdefMap),
-        getDefinition(latexdefMap),
-        syntaxes.get(0).getLabel(),
-        getRemarks());
+        getPhrase(), getDefinition(), getLookupTerms(), primarySyntax().getLabel(), getRemarks());
   }
 
-  String getPhrase(Map<String, String> latexdefMap) {
+  String getPhrase() {
     if (primarySyntax() instanceof VarHyp) {
-      String varId = primarySyntax().getFormula().getSym()[1].getId();
-      return "$" + latexdefMap.get(varId) + "$";
+      return primarySyntax().getFormula().getSym()[1].getId();
     } else {
-      return "$" + latexdefMap.get(sym.getId()) + "$";
+      return sym.getId();
     }
   }
 
   String getRemarks() {
     StringBuilder remarks = new StringBuilder();
 
+    if (primarySyntax() instanceof VarHyp) {
+      String typecode = primarySyntax().getFormula().getSym()[0].getId();
+      remarks.append("A " + getTermWithDisplayPhrase(typecode, typecode) + " variable.");
+    }
     remarks.append(
         combineIfNotIdentical(
             syntaxes.stream()
@@ -89,17 +88,17 @@ class TempTerm {
     return syntaxes.get(0);
   }
 
-  String getDefinition(Map<String, String> latexdefMap) {
-    if (syntaxes instanceof VarHyp) {
-      String typecode = primarySyntax().getFormula().getSym()[0].getId();
-      return "A " + getTermWithDisplayPhrase(typecode, typecode) + " variable.";
-    } else {
-      return getStatementForParseTree(primarySyntax().getExprParseTree(), "wff", latexdefMap);
-    }
+  String getDefinition() {
+    return primarySyntax().getFormula().toString();
   }
 
   String getAssignableId() {
     return assignableId;
+  }
+
+  String[] getLookupTerms() {
+    return getLookupTermsForParseNode(primarySyntax().getExprParseTree().getRoot())
+        .toArray(String[]::new);
   }
 
   static String combineIfNotIdentical(List<String> strs, String delimiter) {
@@ -109,7 +108,7 @@ class TempTerm {
   }
 
   static Term createPrimitiveMetamathTerm(String phrase, String remarks) {
-    Term term = createMetamathTerm(phrase, "", null, remarks);
+    Term term = createMetamathTerm(phrase, "", new String[0], null, remarks);
     term.setPrimitive(true);
     Citation bookCitation = new Citation();
     bookCitation.setTextCitation(
@@ -119,13 +118,14 @@ class TempTerm {
   }
 
   private static Term createMetamathTerm(
-      String phrase, String definition, String stmtLabel, String remarks) {
+      String phrase, String definition, String[] lookupTerms, String stmtLabel, String remarks) {
     Term term = new Term();
     term.setLanguage(Language.METAMATH_SET_MM);
     term.setMetaLanguage(MetaLanguage.METAMATH);
     term.setPhrase(phrase);
     term.setDefinition(definition);
     term.setRemarks(remarks);
+    term.setLookupTerms(lookupTerms);
     if (stmtLabel != null) term.setCitations(new Citation[] {getCitation(stmtLabel)});
     return term;
   }

@@ -7,13 +7,13 @@ import java.util.*;
 
 class Helpers {
   static final String DEDUP_POSTFIX = "--";
-  private static final Map<String, String> TYPE_TO_COLOR_LATEX =
-      Map.of(
-          "wff", "\\color{blue}",
-          "class", "\\color{#C3C}",
-          "setvar", "\\color{red}");
 
-  static boolean areSameProps(Assrt a1, Assrt a2) {
+  static boolean areSameProps(TempProposition t1, TempProposition t2) {
+    Assrt a1 = t1.primaryAssrt();
+    Assrt a2 = t2.primaryAssrt();
+
+    if (a1 instanceof Axiom != a2 instanceof Axiom) return false;
+    if (!t1.distinctVarsStatement().equals(t2.distinctVarsStatement())) return false;
     if (!a1.getFormula().toString().equals(a2.getFormula().toString())) return false;
     if (a1.getLogHypArray().length != a2.getLogHypArray().length) return false;
 
@@ -34,12 +34,8 @@ class Helpers {
     return citation;
   }
 
-  static String varToString(VarHyp hyp, Map<String, String> latexdefMap) {
-    Cnst type = hyp.getTyp();
-    Var var = (Var) hyp.getFormula().getSym()[1];
-    String displayPhrase =
-        "$" + TYPE_TO_COLOR_LATEX.get(type.getId()) + latexdefMap.get(var.getId()) + "$";
-    return getTermWithDisplayPhrase(hyp.getLabel(), displayPhrase);
+  static String varToLookupTerm(VarHyp hyp) {
+    return "#T_" + hyp.getLabel();
   }
 
   static long getNumConstChars(Stmt wffStatement) {
@@ -83,15 +79,15 @@ class Helpers {
     return stmtLabel + ((totalTerm > 1) ? (DEDUP_POSTFIX + (termIndex + 1)) : "");
   }
 
-  static String getStatementForParseNode(ParseNode node, Map<String, String> latexdefMap) {
-    List<String> childNodes = new ArrayList<>();
+  static List<String> getLookupTermsForParseNode(ParseNode node) {
+    List<List<String>> childNodes = new ArrayList<>();
     for (ParseNode childNode : node.child) {
-      childNodes.add(getStatementForParseNode(childNode, latexdefMap));
+      childNodes.add(getLookupTermsForParseNode(childNode));
     }
 
     Sym[] formula = node.stmt.getFormula().getSym();
 
-    if (node.stmt instanceof VarHyp) return varToString((VarHyp) node.stmt, latexdefMap);
+    if (node.stmt instanceof VarHyp) return Arrays.asList(varToLookupTerm((VarHyp) node.stmt));
 
     VarHyp[] varHypArray = node.stmt.getMandVarHypArray();
     /// TODO: check comment in ParseTree.java
@@ -109,55 +105,36 @@ class Helpers {
     long numConstItems = getNumConstChars(node.stmt);
 
     int constItemIndex = 0;
-    StringBuilder builder = new StringBuilder();
+    List<String> lookupTerms = new ArrayList<>();
     for (int symIndex = 1; symIndex < formula.length; symIndex++) {
       Sym sym = formula[symIndex];
       String id = sym.getId();
       if (sym instanceof Cnst) {
-        if (id.equals("(")) {
-          builder.append("$($");
-          continue;
-        }
-        if (id.equals(")")) {
-          builder.append("$)$");
-          continue;
-        }
-        myAssert(latexdefMap.containsKey(id));
-        String latexString = "$" + latexdefMap.get(id) + "$";
+        if (id.equals("(") || id.equals(")")) continue;
+
         String assignableId =
             getAssignableIdForTermInStmt(node.stmt.getLabel(), constItemIndex, numConstItems);
-        builder.append(getTermWithDisplayPhrase(assignableId, latexString));
+        lookupTerms.add("#T_" + assignableId);
         constItemIndex++;
       } else {
         myAssert(sym instanceof Var);
-        if (childNodes.size() == 0) {
-          builder.append("$" + latexdefMap.get(id) + "$");
-        } else {
-          Integer index = varIdToChildIndex.get(id);
-          myAssert(index != null);
-          builder.append(childNodes.get(index));
-        }
+        Integer index = varIdToChildIndex.get(id);
+        myAssert(index != null);
+        lookupTerms.addAll(childNodes.get(index));
       }
     }
-    return builder.toString().trim();
+    return lookupTerms;
   }
 
-  static String getStatementForParseTree(
-      ParseTree tree, String typeCodeLatex, Map<String, String> latexdefMap) {
-    ParseNode root = tree.getRoot();
-    return "$\\scriptsize \\color{#999}"
-        + typeCodeLatex
-        + "$ "
-        + getStatementForParseNode(root, latexdefMap).replace("$$", "");
-  }
+  static <K, V> void putIfNotDifferent(Map<K, V> map, K key, V value) {
+    V existing = map.putIfAbsent(key, value);
 
-  static <K, V> void putIfAbsent(Map<K, V> map, K key, V value) {
-    myAssert(map.putIfAbsent(key, value) == null);
+    myAssert(existing == null || value.equals(existing));
   }
 
   static void myAssert(boolean val) {
     if (!val) {
-      throw new IllegalStateException("val");
+      throw new IllegalStateException("This shouldn't happen!");
     }
   }
 

@@ -1,12 +1,14 @@
 package mmj.sophize;
 
-import mmj.lang.Assrt;
-import mmj.lang.Stmt;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import mmj.gmff.GMFFManager;
+import mmj.lang.*;
 import mmj.verify.Grammar;
 import org.sophize.datamodel.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -18,6 +20,12 @@ public class StoreCombiner {
   private static final String OUTPUT_DIRECTORY = "output";
   private static List<ResourceStore> STORES = new ArrayList<>();
   private static final String databaseNames[] = {"set.mm", "iset.mm", "nf.mm"};
+
+  private static final Map<String, String> TYPE_TO_COLOR_LATEX =
+      Map.of(
+          "wff", "\\color{blue}",
+          "class", "\\color{#C3C}",
+          "setvar", "\\color{red}");
 
   public static void processGrammar(Grammar grammar) {
     try {
@@ -37,6 +45,8 @@ public class StoreCombiner {
     for (int i = 1; i < stores.size(); i++) {
       combinedTerms = combineTerms(combinedTerms, stores.get(i).termData);
     }
+
+    fixAndWriteLatexMap(combinedTerms);
 
     Map<String, TempProposition> combinedPropositions = firstStore.propositionData;
     Map<String, TempArgument> combinedArguments = firstStore.argumentData;
@@ -62,15 +72,37 @@ public class StoreCombiner {
       fixAxioms(store.defaultBeliefset, dedupedPropsIdMap);
       beliefsets.put(store.defaultBeliefset.getNames()[0], store.defaultBeliefset);
     }
-    writeResources(
-        combinedTerms,
-        combinedPropositions,
-        combinedArguments,
-        beliefsets,
-        ResourceStore.latexdefMap);
+    writeResources(combinedTerms, combinedPropositions, combinedArguments, beliefsets);
+  }
+
+  private static void fixAndWriteLatexMap(Map<String, TempTerm> combinedTerms) throws Exception {
+    for (TempTerm tempTerm : combinedTerms.values()) {
+      if (tempTerm.syntaxes.get(0) instanceof VarHyp) {
+        VarHyp hyp = (VarHyp) tempTerm.syntaxes.get(0);
+        Cnst type = hyp.getTyp();
+        Var var = (Var) hyp.getFormula().getSym()[1];
+
+        String existingMapping = GMFFManager.LATEXDEF_MAP.get(var.getId());
+        Helpers.myAssert(existingMapping != null);
+        String colorInfo = TYPE_TO_COLOR_LATEX.get(type.getId());
+        if (!existingMapping.startsWith(colorInfo)) {
+          GMFFManager.LATEXDEF_MAP.put(
+              var.getId(), TYPE_TO_COLOR_LATEX.get(type.getId()) + existingMapping);
+        }
+      }
+    }
+    GMFFManager.LATEXDEF_MAP.put("|-", "\\scriptsize\\color{#999} \\vdash");
+    GMFFManager.LATEXDEF_MAP.put("wff", "\\scriptsize\\color{#999} {\\rm wff}");
+    GMFFManager.LATEXDEF_MAP.put("class", "\\scriptsize\\color{#999} {\\rm class}");
+    ObjectMapper mapper = new ObjectMapper();
+    Files.writeString(
+        Paths.get("output", "metamath_set_mm_latex_map"),
+        new ObjectMapper().writeValueAsString(GMFFManager.LATEXDEF_MAP),
+        new OpenOption[0]);
   }
 
   private static void fixAxioms(Beliefset beliefset, Map<String, String> dedupedPropsIdMap) {
+    if (beliefset == null || beliefset.getUnsupportedPropositionPtrs() == null) return;
     for (int i = 0; i < beliefset.getUnsupportedPropositionPtrs().length; i++) {
       String label = beliefset.getUnsupportedPropositionPtrs()[i].substring(3); // Remove the "#P_"
 
@@ -83,27 +115,25 @@ public class StoreCombiner {
       Map<String, TempTerm> termData,
       Map<String, TempProposition> propositionData,
       Map<String, TempArgument> argumentData,
-      Map<String, Beliefset> beliefsets,
-      Map<String, String> latexdefMap)
+      Map<String, Beliefset> beliefsets)
       throws IOException {
     String directory = getDirectory(Term.class);
     for (Map.Entry<String, Term> entry : getHardcodedTerms().entrySet()) {
       ResourceUtils.writeJson(directory, entry.getKey(), entry.getValue());
     }
     for (Map.Entry<String, TempTerm> entry : termData.entrySet()) {
-      ResourceUtils.writeJson(directory, entry.getKey(), entry.getValue().getTerm(latexdefMap));
+      ResourceUtils.writeJson(directory, entry.getKey(), entry.getValue().getTerm());
     }
 
     directory = getDirectory(Proposition.class);
     for (Map.Entry<String, TempProposition> entry : propositionData.entrySet()) {
-      ResourceUtils.writeJson(
-          directory, entry.getKey(), entry.getValue().getProposition(latexdefMap));
+      ResourceUtils.writeJson(directory, entry.getKey(), entry.getValue().getProposition());
     }
 
     directory = getDirectory(Argument.class);
     for (Map.Entry<String, TempArgument> entry : argumentData.entrySet()) {
       ResourceUtils.writeJson(
-          directory, entry.getKey(), entry.getValue().getArgument(latexdefMap, propositionData));
+          directory, entry.getKey(), entry.getValue().getArgument(propositionData));
     }
 
     directory = getDirectory(Beliefset.class);
@@ -235,10 +265,11 @@ public class StoreCombiner {
   }
 
   private static TempTerm mergeTerms(TempTerm term1, TempTerm term2) {
-    Map<String, String> latexdefMap = ResourceStore.latexdefMap;
-    if (!term1.getPhrase(latexdefMap).equals(term2.getPhrase(latexdefMap))
-        || !term1.getDefinition(latexdefMap).equals(term2.getDefinition(latexdefMap))
-        || !term1.getAssignableId().equals(term2.getAssignableId())) {
+    if (!term1.getPhrase().equals(term2.getPhrase())
+        || !term1.getDefinition().equals(term2.getDefinition())
+        || !term1.getAssignableId().equals(term2.getAssignableId())
+        || !String.join("..", term1.getLookupTerms())
+            .equals(String.join("..", term2.getLookupTerms()))) {
       System.out.println("Languages are different, merge not possible.");
       throw new IllegalStateException("Languages are different, merge not possible.");
     }
@@ -250,19 +281,18 @@ public class StoreCombiner {
   }
 
   private static TempProposition mergePropositions(TempProposition prop1, TempProposition prop2) {
-    if (!Helpers.areSameProps(prop1.assrts.get(0), prop2.assrts.get(0))
-        || !prop1.distinctVarsString.equals(prop2.distinctVarsString)) return null;
+    if (!Helpers.areSameProps(prop1, prop2) || !prop1.distinctVars.equals(prop2.distinctVars))
+      return null;
     List<Assrt> assrts = new ArrayList<>(prop1.assrts);
     assrts.addAll(prop2.assrts);
-    return new TempProposition(assrts, prop1.distinctVarsString);
+    return new TempProposition(assrts, prop1.distinctVars);
   }
 
   private static TempArgument mergeArguments(
       TempArgument arg1, TempArgument arg2, Map<String, TempProposition> propositionData) {
-    Map<String, String> latexdefMap = ResourceStore.latexdefMap;
     try {
-      String arg1Str = toJsonString(arg1.getArgument(latexdefMap, propositionData));
-      String arg2Str = toJsonString(arg2.getArgument(latexdefMap, propositionData));
+      String arg1Str = toJsonString(arg1.getArgument(propositionData));
+      String arg2Str = toJsonString(arg2.getArgument(propositionData));
       return arg1Str.equals(arg2Str) ? arg1 : null;
     } catch (Exception e) {
       return null;
