@@ -29,10 +29,26 @@
             <src path="src"/>
             <src path="lib/JSON-java"/>
             <classpath refid="mmj2.classpath"/>
+            <classpath>
+                <pathelement path="lib/datamodel-0.2.1.jar"/>
+            </classpath>
+            <classpath>
+                <pathelement path="lib/jackson-annotations-2.10.2.jar"/>
+            </classpath>
+            <classpath>
+                <pathelement path="lib/jackson-core-2.10.2.jar"/>
+            </classpath>
+            <classpath>
+                <pathelement path="lib/jackson-databind-2.10.2.jar"/>
+            </classpath>
         </javac>
     </target>
     <target depends="build-project" name="build-jar">
         <jar jarfile="mmj2jar/mmj2.jar" basedir="classes" includes="**/*.class">
+            <zipgroupfileset dir="lib" includes="datamodel-0.2.1.jar" />
+            <zipgroupfileset dir="lib" includes="jackson-annotations-2.10.2.jar" />
+            <zipgroupfileset dir="lib" includes="jackson-core-2.10.2.jar" />
+            <zipgroupfileset dir="lib" includes="jackson-databind-2.10.2.jar" />
             <manifest>
                 <attribute name="Main-Class" value="mmj.util.BatchMMJ2" />
             </manifest>
