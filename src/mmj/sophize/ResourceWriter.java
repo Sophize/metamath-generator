@@ -25,7 +25,7 @@ import java.util.*;
 import static mmj.sophize.TempTerm.createPrimitiveMetamathTerm;
 import static org.sophize.datamodel.ResourceUtils.toJsonString;
 
-public class StoreCombiner {
+public class ResourceWriter {
   private static final String OUTPUT_DIRECTORY = "output";
   private static List<ResourceStore> STORES = new ArrayList<>();
 
@@ -37,7 +37,7 @@ public class StoreCombiner {
 
   public static void main(final String[] args) {
     BatchMMJ2 batchMMJ2 = new BatchMMJ2();
-    batchMMJ2.generateSvcCallback(args, StoreCombiner::svcCallback);
+    batchMMJ2.generateSvcCallback(args, ResourceWriter::svcCallback);
   }
 
   public static void svcCallback(
@@ -61,7 +61,7 @@ public class StoreCombiner {
       ResourceStore resourceStore = new ResourceStore(databaseName);
       resourceStore.createResources(grammar);
       STORES.add(resourceStore);
-      if (STORES.size() == 2) StoreCombiner.combineAndWriteStores(STORES);
+      if (STORES.size() == 2) ResourceWriter.combineAndWriteStores(STORES);
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println(e.getMessage());

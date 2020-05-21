@@ -37,7 +37,6 @@ import static mmj.util.UtilConstants.*;
 
 import mmj.lang.*;
 import mmj.lang.ParseTree.RPNStep;
-import mmj.sophize.StoreCombiner;
 import mmj.verify.*;
 
 /**
