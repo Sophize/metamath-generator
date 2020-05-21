@@ -272,7 +272,6 @@ public class GrammarBoss extends Boss {
         logicalSystem.setSyntaxVerifier(grammar);
 
         batchFramework.outputBoss.printAndClearMessages();
-        StoreCombiner.processGrammar(grammar);
     }
 
     /**

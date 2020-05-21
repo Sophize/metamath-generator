@@ -3,9 +3,17 @@ package mmj.sophize;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mmj.gmff.GMFFManager;
 import mmj.lang.*;
+import mmj.pa.ProofAsst;
+import mmj.pa.ProofAsstPreferences;
+import mmj.tl.TheoremLoader;
+import mmj.tl.TlPreferences;
+import mmj.util.BatchMMJ2;
+import mmj.util.OutputBoss;
 import mmj.verify.Grammar;
+import mmj.verify.VerifyProofs;
 import org.sophize.datamodel.*;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -20,7 +28,6 @@ import static org.sophize.datamodel.ResourceUtils.toJsonString;
 public class StoreCombiner {
   private static final String OUTPUT_DIRECTORY = "output";
   private static List<ResourceStore> STORES = new ArrayList<>();
-  private static final String databaseNames[] = {"set.mm", "iset.mm", "nf.mm"};
 
   private static final Map<String, String> TYPE_TO_COLOR_LATEX =
       Map.of(
@@ -28,9 +35,30 @@ public class StoreCombiner {
           "class", "\\color{#C3C}",
           "setvar", "\\color{red}");
 
-  public static void processGrammar(Grammar grammar) {
+  public static void main(final String[] args) {
+    BatchMMJ2 batchMMJ2 = new BatchMMJ2();
+    batchMMJ2.generateSvcCallback(args, StoreCombiner::svcCallback);
+  }
+
+  public static void svcCallback(
+      Messages messages,
+      OutputBoss outputBoss,
+      LogicalSystem logicalSystem,
+      VerifyProofs verifyProofs,
+      Grammar grammar,
+      WorkVarManager workVarManager,
+      ProofAsstPreferences proofAsstPreferences,
+      ProofAsst proofAsst,
+      TlPreferences tlPreferences,
+      TheoremLoader theoremLoader,
+      File svcFolder,
+      Map<String, String> svcArgs) {
+    processGrammar(grammar, svcArgs.get("databaseName"));
+  }
+
+  public static void processGrammar(Grammar grammar, String databaseName) {
     try {
-      ResourceStore resourceStore = new ResourceStore(databaseNames[STORES.size()]);
+      ResourceStore resourceStore = new ResourceStore(databaseName);
       resourceStore.createResources(grammar);
       STORES.add(resourceStore);
       if (STORES.size() == 2) StoreCombiner.combineAndWriteStores(STORES);
